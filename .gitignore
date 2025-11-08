@@ -1,0 +1,10 @@
+tests
+images/
+images_test/
+*.log
+*.pyc
+__pycache__/
+*.png
+*.onnx
+*.pt
+*.env
