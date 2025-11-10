@@ -97,8 +97,12 @@ async def pipeline_async(images):
             valid_pairs.append((im, res))
     # ✅ Early return nếu không có plates
     # logger.info(f"[Pipeline] Detected {len(cropped_plates)} plates in {len(images)} images")
-    if not cropped_plates:
-        return []
+    
+    if len(cropped_plates) == 0:
+        for im, truck_res in zip(images, truck_results):
+            final_res = PipelineResult(truck_res, OCRResult({"text": "", "conf": 0.0}).process())
+            results_json.append(final_res.to_dict())
+        return results_json
                 
     # 2️⃣ Text detection (multi-bbox)
     # logger.info("[Pipeline] Running text detection...")
@@ -112,6 +116,9 @@ async def pipeline_async(images):
         bboxes = det
         # Sắp xếp từ trái qua phải (theo x1)
         # bboxes.sort(key=lambda b: b[0])
+        if len(bboxes) == 0:
+            crops = [plate]
+            continue
         crops = [crop_image(plate, box, (dh, dw), scale, use_scale=False) for box, (dh, dw), scale in bboxes]
         cropped_text_groups.append(crops)
     # 3️⃣ OCR recognition (OPTIMIZED - Flatten batching)
