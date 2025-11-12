@@ -1,64 +1,43 @@
 services:
-  # ====================================
-  # Worker Service (Staged Pipeline)
-  # ====================================
   worker:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: track_status_worker
     restart: unless-stopped
+
+    runtime: nvidia
+    
     environment:
-      # Redis Configuration (connect to host machine)
+      NVIDIA_VISIBLE_DEVICES: all
       REDIS_HOST: host.docker.internal
       REDIS_PORT: 6379
       REDIS_DB: 0
       REDIS_PASSWORD: ""
-
-      # Pipeline Configuration
       PIPELINE_MODE: staged
       WORKER_BATCH_SIZE: 16
       BATCH_TIMEOUT: 0.05
       MAX_CONCURRENT_BATCHES: 10
-
-      # Logging
       LOG_LEVEL: INFO
-
-      # Memory Management
       RAM_THRESHOLD: 0.85
       GPU_THRESHOLD: 0.90
       MAX_QUEUE_SIZE: 1000
-
-      # Batch Limits
       TRUCK_MAX_BATCH: 32
       TEXT_MAX_BATCH: 16
       OCR_MAX_BATCH: 64
+    
     volumes:
-      # Mount model directories (read-only)
       - ./track_model:/app/track_model:ro
       - ./text_detection:/app/text_detection:ro
       - ./text_recognition:/app/text_recognition:ro
-
-      # Mount writable directories
       - ./results:/app/results
       - ./logs:/app/logs
       - ./trt_cache:/app/trt_cache
-
-      # Mount images for testing
       - ./images:/app/images:ro
       - ./images_test:/app/images_test:ro
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    
     command: python start_worker_optimized.py
 
-  # ====================================
-  # API Service (FastAPI Backend)
-  # ====================================
   api:
     build:
       context: .
@@ -66,13 +45,10 @@ services:
     container_name: track_status_api
     restart: unless-stopped
     environment:
-      # Redis Configuration (connect to host machine)
       REDIS_HOST: host.docker.internal
       REDIS_PORT: 6379
       REDIS_DB: 0
       REDIS_PASSWORD: ""
-      
-      # Logging
       LOG_LEVEL: INFO
     ports:
       - "${API_PORT:-8000}:8000"
@@ -82,9 +58,6 @@ services:
       - ./logs:/app/logs
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
-# ====================================
-# Networks
-# ====================================
 networks:
   default:
     driver: bridge
