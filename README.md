@@ -5,7 +5,144 @@ Hướng dẫn cài đặt và sử dụng (tiếng Việt)
 ## Mục đích
 Project này chứa một pipeline xử lý ảnh/ocr được tối ưu cho GPU với chế độ "staged pipeline" (pipelined stages) và các worker xử lý bất đồng bộ. Bao gồm cả API (FastAPI) để upload/monitoring, các pipeline xử lý văn bản/nhận diện, và scripts để khởi động worker tối ưu.
 
-## Yêu cầu cơ bản
+## Các cách cài đặt
+
+Project hỗ trợ 2 cách cài đặt:
+
+### 🐳 Cách 1: Docker (Khuyến nghị - Dễ nhất)
+- ✅ Không cần cài đặt Python, CUDA, dependencies
+- ✅ Tự động cài Redis
+- ✅ Môi trường chuẩn, reproducible
+- ✅ Dễ deploy và scale
+- 👉 [Xem hướng dẫn Docker](#cài-đặt-với-docker)
+
+### 🐍 Cách 2: Conda (Development)
+- ✅ Phù hợp cho development và debug
+- ✅ Có thể custom dependencies
+- ⚠️ Cần cài CUDA, Redis riêng
+- 👉 [Xem hướng dẫn Conda](#cài-đặt-với-conda)
+
+---
+
+## 🐳 Cài đặt với Docker
+
+### Yêu cầu
+- **Docker Desktop** (Windows/Mac) hoặc Docker Engine (Linux)
+- **NVIDIA Docker runtime** (cho GPU support)
+  - Windows: Docker Desktop với WSL2 + NVIDIA Container Toolkit
+  - Linux: nvidia-docker2
+
+### Cài đặt NVIDIA Container Toolkit (cho GPU)
+
+#### Windows với WSL2:
+```powershell
+# Trong WSL2 Ubuntu
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+```
+
+#### Linux:
+```bash
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+
+sudo apt-get update
+sudo apt-get install -y nvidia-docker2
+sudo systemctl restart docker
+```
+
+### Khởi động project với Docker Compose
+
+```powershell
+# 1. Clone repository (nếu chưa có)
+git clone <repository-url>
+cd track_status
+
+# 2. Tạo file .env từ template
+Copy-Item .env.example .env
+
+# 3. Build và khởi động tất cả services (Redis + Worker)
+docker-compose up -d
+
+# 4. Xem logs
+docker-compose logs -f worker
+
+# 5. Kiểm tra status
+docker-compose ps
+```
+
+### Các lệnh Docker hữu ích
+
+```powershell
+# Dừng tất cả services
+docker-compose down
+
+# Rebuild image khi có thay đổi code
+docker-compose up -d --build
+
+# Xem logs của worker
+docker-compose logs -f worker
+
+# Xem logs của Redis
+docker-compose logs -f redis
+
+# Chạy chỉ Redis
+docker-compose up -d redis
+
+# Chạy chỉ Worker (yêu cầu Redis đã chạy)
+docker-compose up -d worker
+
+# Chạy API service
+docker-compose up -d api
+
+# Vào terminal của worker container
+docker-compose exec worker bash
+
+# Kiểm tra GPU trong container
+docker-compose exec worker nvidia-smi
+
+# Restart worker
+docker-compose restart worker
+
+# Xóa tất cả (bao gồm volumes)
+docker-compose down -v
+```
+
+### Cấu hình Docker
+
+Chỉnh sửa file `docker-compose.yml` hoặc `.env` để thay đổi cấu hình:
+
+```env
+# .env file
+REDIS_PORT=6379
+API_PORT=8000
+WORKER_BATCH_SIZE=16
+LOG_LEVEL=INFO
+```
+
+### Monitor GPU trong Docker
+
+```powershell
+# Xem GPU usage từ host
+nvidia-smi
+
+# Xem GPU usage trong container
+docker-compose exec worker python monitor_gpu.py
+```
+
+---
+
+## 🐍 Cài đặt với Conda
+
+### Yêu cầu cơ bản
 - **Anaconda/Miniconda**: khuyến nghị để quản lý môi trường Python
 - **Python 3.8+** (khuyến nghị 3.9/3.10)
 - **GPU + CUDA** nếu muốn chạy ONNX / GPU-accelerated runtime
@@ -241,6 +378,48 @@ python -m pytest -q tests/
 
 ## Vấn đề thường gặp & gợi ý khắc phục
 
+### Docker
+
+#### GPU không nhận diện trong container
+```powershell
+# Kiểm tra nvidia-docker hoạt động
+docker run --rm --gpus all nvidia/cuda:12.1.0-base-ubuntu22.04 nvidia-smi
+
+# Nếu lỗi, restart Docker
+# Windows: Restart Docker Desktop
+# Linux: sudo systemctl restart docker
+
+# Kiểm tra driver và runtime
+nvidia-smi
+docker info | grep -i runtime
+```
+
+#### Container không khởi động
+```powershell
+# Xem logs chi tiết
+docker-compose logs worker
+
+# Rebuild image
+docker-compose build --no-cache worker
+docker-compose up -d worker
+
+# Kiểm tra Redis đã chạy chưa
+docker-compose ps redis
+docker-compose exec redis redis-cli ping
+```
+
+#### Out of memory trong container
+```powershell
+# Giảm batch size trong .env hoặc docker-compose.yml
+WORKER_BATCH_SIZE=8
+TRUCK_MAX_BATCH=16
+TEXT_MAX_BATCH=8
+OCR_MAX_BATCH=32
+
+# Restart worker
+docker-compose restart worker
+```
+
 ### Redis
 - **Lỗi `ConnectionError: Error 10061`**: Redis chưa chạy. Khởi động Redis server trước.
 - **Lỗi `WRONGPASS invalid username-password pair`**: Sai password Redis. Kiểm tra `REDIS_PASSWORD` trong `.env`.
@@ -267,21 +446,70 @@ python -m pytest -q tests/
   - Chạy `uvicorn` với module path chính xác
   - Kiểm tra port có bị chiếm không: `netstat -ano | findstr :8000`
 
-## Gợi ý phát triển tiếp / next steps
-- Tạo `requirements.txt` chính xác cho dự án (pip freeze từ môi trường dev). Điều này giúp cài đặt reproducible.
-- Thêm `.env.example` với biến môi trường phổ biến.
-- Thêm Dockerfile / docker-compose cho triển khai production.
-- Viết pipeline-level integration tests và CI để kiểm tra hiệu năng GPU.
+---
 
-## Liên kết tham khảo nội bộ
-- `docs/GPU_OPTIMIZATION.md`
-- `docs/ONNX_GPU_FIX.md`
-- `docs/STAGED_PIPELINE_OPTIMIZATION.md`
+## 🚀 Quick Reference
+
+### Docker Commands
+
+```powershell
+# Start everything
+docker-compose up -d
+
+# View logs
+docker-compose logs -f worker
+
+# Check status
+docker-compose ps
+
+# Stop everything
+docker-compose down
+
+# Rebuild after code changes
+docker-compose up -d --build
+
+# Check environment
+.\check-docker-env.ps1
+```
+
+### Conda Commands
+
+```powershell
+# Activate environment
+conda activate track_status
+
+# Start worker
+python .\start_staged_worker.py
+
+# Monitor GPU
+python .\monitor_gpu.py
+
+# Run tests
+python -m pytest tests/
+```
+
+## 📚 Tài liệu bổ sung
+
+- **[DOCKER.md](DOCKER.md)** - Hướng dẫn chi tiết về Docker deployment
+- **[docs/GPU_OPTIMIZATION.md](docs/GPU_OPTIMIZATION.md)** - Tối ưu GPU
+- **[docs/ONNX_GPU_FIX.md](docs/ONNX_GPU_FIX.md)** - Fix ONNX GPU issues
+- **[docs/STAGED_PIPELINE_OPTIMIZATION.md](docs/STAGED_PIPELINE_OPTIMIZATION.md)** - Pipeline optimization
+- **[worker/README.md](worker/README.md)** - Worker documentation
+
+## 🤝 Đóng góp
+
+Nếu gặp vấn đề hoặc có đề xuất cải tiến:
+1. Tạo issue mô tả chi tiết
+2. Fork repository
+3. Tạo branch cho feature/fix
+4. Submit pull request
+
+## 📄 License
+
+[Thêm license information nếu có]
 
 ---
-Nếu bạn muốn, tôi có thể:
-- Tạo `requirements.txt` mẫu bằng cách quét imports trong code.
-- Tạo file `.env.example` với các biến môi trường thường dùng.
-- Thêm ví dụ chạy `uvicorn` chính xác nếu bạn cho biết file chứa `app = FastAPI(...)`.
 
-Cần mình chỉnh nội dung README (bổ sung chi tiết file, lệnh cụ thể) theo ý bạn chỗ nào không?"# status_track" 
+**Repository**: [TongDuyDat/status_track](https://github.com/TongDuyDat/status_track)
+
+Cần hỗ trợ? Tạo issue trên GitHub hoặc liên hệ maintainer. 

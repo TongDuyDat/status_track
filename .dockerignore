@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.conda/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+*.out
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+*.md
+docs/
+README.md
+
+# Results and temporary files
+results/
+resluts/
+*.tmp
+*.temp
+
+# Large model files (should be mounted as volumes)
+# Uncomment if models are very large and you prefer volume mounting
+# track_model/*.pt
+# track_model/*.onnx
+# text_detection/*.onnx
+# text_recognition/*.onnx
+
+# TensorRT cache (will be regenerated)
+trt_cache/
+
+# Test images (can be mounted)
+# images/
+# images_test/
+
+# Environment files
+.env.local
+.env.*.local
+
+# OS
+Thumbs.db
