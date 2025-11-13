@@ -6,11 +6,6 @@ from fastapi import APIRouter
 import psutil
 import torch
 import os
-from pipelines.pipeline_async import (
-    truck_batcher,
-    text_batcher,
-    ocr_batcher,
-)
 
 PIPELINE_MODE = os.getenv("PIPELINE_MODE", "staged").lower()
 
