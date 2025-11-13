@@ -24,7 +24,8 @@ services:
       TRUCK_MAX_BATCH: 32
       TEXT_MAX_BATCH: 16
       OCR_MAX_BATCH: 64
-    
+    env_file:
+      - .env
     deploy:
       resources:
         reservations:
@@ -57,6 +58,8 @@ services:
       REDIS_DB: 0
       REDIS_PASSWORD: ""
       LOG_LEVEL: INFO
+    env_file:
+      - .env
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
