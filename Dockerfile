@@ -70,7 +70,7 @@ RUN pip install --no-cache-dir \
     psutil==7.0.0 \
     loguru==0.7.3 \
     pyyaml==6.0.2
-
+RUN pip install --no-cache-dir -r requirements.txt
 # ====================================
 # Stage 3: Final runtime image
 # ====================================
