@@ -45,7 +45,7 @@ WORKDIR /app
 
 # Copy requirements file
 COPY requirements-docker.txt requirements.txt
-
+COPY .env .env
 # Install Python dependencies
 # Split into multiple layers for better caching
 RUN pip install --no-cache-dir \
