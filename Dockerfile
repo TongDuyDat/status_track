@@ -35,13 +35,11 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
     echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
 
-# Configure conda to use conda-forge (fix ToS issue)
+# Configure conda and create Python 3.10 environment (GỘP CHUNG ĐỂ CONFIG APPLY)
 RUN /opt/conda/bin/conda config --set channel_priority strict && \
     /opt/conda/bin/conda config --prepend channels conda-forge && \
-    /opt/conda/bin/conda config --set always_yes yes
-
-# Create Python 3.10 environment
-RUN /opt/conda/bin/conda create -n py310 python=3.10 -y && \
+    /opt/conda/bin/conda config --set always_yes yes && \
+    /opt/conda/bin/conda create -n py310 python=3.10 -y && \
     /opt/conda/bin/conda clean --all -y && \
     echo "conda activate py310" >> ~/.bashrc
 
@@ -107,7 +105,7 @@ WORKDIR /app
 ENV PATH=/opt/conda/envs/py310/bin:$PATH \
     CONDA_DEFAULT_ENV=py310
 
-# Set CUDA library paths (CHỈ CẦN 1 LẦN Ở ĐÂY)
+# Set CUDA library paths
 ENV LD_LIBRARY_PATH="\
 /usr/local/cuda/lib64:\
 /usr/local/cuda/targets/x86_64-linux/lib:\
