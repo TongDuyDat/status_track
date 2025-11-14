@@ -27,24 +27,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# =========================================================
-# INSTALL MAMBAFORGE (NO ToS, NO ERROR) 
-# =========================================================
-RUN wget --quiet https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh -O /tmp/mambaforge.sh && \
-    bash /tmp/mambaforge.sh -b -p /opt/conda && \
-    rm /tmp/mambaforge.sh
+# Install Miniconda
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
+    /bin/bash /tmp/miniconda.sh -b -p /opt/conda && \
+    rm /tmp/miniconda.sh && \
+    # /opt/conda/bin/conda clean --all --yes && \
+    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
+    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
+    echo "conda activate base" >> ~/.bashrc
 
-SHELL ["/bin/bash", "-c"]
+# Update conda and create Python 3.10 environment
+RUN conda install -y python=3.10 && \
+    # conda update -n base -c defaults conda && \
+    # /opt/conda/bin/conda clean --all --yes
 
-# =========================================================
-# CREATE CONDA ENV
-# =========================================================
-RUN conda create -y -n track -c conda-forge python=3.10 && \
-    conda clean --all -y
-
-ENV PATH="/opt/conda/envs/track/bin:$PATH"
-ENV CONDA_DEFAULT_ENV=track
-ENV CONDA_PREFIX=/opt/conda/envs/track
 # Upgrade pip
 RUN pip install --upgrade pip setuptools wheel
 
