@@ -42,7 +42,7 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
 #     /opt/conda/bin/conda clean --all -y
 
 # Create Python 3.10 environment
-RUN /opt/conda/bin/conda create -n py310 python=3.10 -c conda-forge -y && \
+RUN /opt/conda/bin/conda create -n py310 python=3.10 -y && \
     # /opt/conda/bin/conda clean --all -y && \
     echo "conda activate py310" >> ~/.bashrc
 
