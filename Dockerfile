@@ -1,145 +1,97 @@
-# ====================================
-# Multi-stage Dockerfile for Track Status Project with Miniconda
-# ====================================
+# ===========================================
+# CUDA 12.1 + cuDNN 9 Runtime
+# ===========================================
+FROM nvcr.io/nvidia/cuda:12.1.1-cudnn9-runtime-ubuntu22.04 AS base
 
-# Stage 1: Base image with CUDA support and Miniconda
-FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04 AS base
-
-# Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PATH=/opt/conda/bin:$PATH \
-    CONDA_DIR=/opt/conda
+    PATH="/opt/conda/bin:$PATH"
 
-# Install system dependencies
+# -------------------------------------------
+# System packages
+# -------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget \
-    curl \
-    gnupg \
-    ca-certificates \
-    bzip2 \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
-    libgl1-mesa-glx \
-    git \
+    wget curl bzip2 git ca-certificates \
+    libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1-mesa-glx libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Add NVIDIA package repos and install cuDNN 9 + TensorRT (CUDA 12 / cuDNN9)
-RUN curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/3bf863cc.pub | gpg --dearmor -o /usr/share/keyrings/nvidia-archive-keyring.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/nvidia-archive-keyring.gpg] https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/ /" > /etc/apt/sources.list.d/cuda.list && \
-    echo "deb [signed-by=/usr/share/keyrings/nvidia-archive-keyring.gpg] https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2204/x86_64/ /" > /etc/apt/sources.list.d/nvidia-ml.list && \
-    apt-get update && apt-get install -y --no-install-recommends \
-      libcudnn9 \
-      libcudnn9-dev \
-      libnvinfer8 \
-      libnvinfer-dev \
-      libnvinfer-plugin8 || true && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Miniconda
-RUN wget --quiet https://repo.anaconda.com/archive/Anaconda3-2022.05-Linux-x86_64.sh -O ~/anaconda.sh && \
-	/bin/bash ~/anaconda.sh -b -p /opt/conda && \
-	rm ~/anaconda.sh && \
-	/opt/conda/bin/conda clean -tipsy && \
-	ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
-	echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
-	echo "conda activate base" >> ~/.bashrc && \
-	find /opt/conda/ -follow -type f -name '*.a' -delete && \
-	find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
-	/opt/conda/bin/conda clean -afy
+# ===========================================
+# Install TensorRT 10 (for CUDA 12 / cuDNN9)
+# ===========================================
+RUN wget https://developer.download.nvidia.com/compute/tensorrt/10.0.1/local_repos/nv-tensorrt-local-repo-ubuntu2204-10.0.1-cuda-12.1_1.0-1_amd64.deb \
+    -O /tmp/tensorrt.deb && \
+    dpkg -i /tmp/tensorrt.deb && \
+    cp /var/nv-tensorrt-local-repo-ubuntu2204-10.0.1-cuda-12.1/nv-tensorrt-local-keys/* /usr/share/keyrings/ && \
+    apt-get update && apt-get install -y tensorrt tensorrt-dev && \
+    rm -rf /var/lib/apt/lists/* /tmp/tensorrt.deb
 
-ENV PATH /opt/conda/bin:$PATH
-COPY requirements.txt /tmp/
-RUN conda update conda -y && conda create -n env10 python=3.10 -y
 
-RUN echo "source activate env10" > ~/.bashrc
-ENV PATH /opt/conda/envs/env10/bin:$PATH
-# Upgrade pip in py310 environment
-RUN /bin/bash -c "source activate env10"
+# ===========================================
+# Install Mambaforge (no ToS, stable)
+# ===========================================
+RUN wget --quiet https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh \
+    -O /tmp/mambaforge.sh && \
+    bash /tmp/mambaforge.sh -b -p /opt/conda && rm /tmp/mambaforge.sh
 
-RUN pip install --upgrade pip setuptools wheel
+SHELL ["/bin/bash", "-c"]
 
-# ====================================
-# Stage 2: Dependencies installation
-# ====================================
-FROM base AS dependencies
+# ===========================================
+# Create Python 3.10 Environment
+# ===========================================
+RUN conda create -y -n track python=3.10 && conda clean -afy
 
-# Set working directory
-WORKDIR /app
+ENV PATH="/opt/conda/envs/track/bin:$PATH"
+ENV CONDA_PREFIX="/opt/conda/envs/track"
+ENV CONDA_DEFAULT_ENV="track"
 
-# Copy requirements file
-COPY requirements-docker.txt requirements.txt
-COPY .env .env
 
-# Install Python dependencies in layers for better caching
-RUN pip install --no-cache-dir \
-    fastapi==0.115.6 \
-    uvicorn[standard]==0.34.0 \
-    python-dotenv==1.0.1 \
-    redis==6.4.0 \
-    aioredis==2.0.1
-
-RUN pip install --no-cache-dir \
-    numpy==1.26.4 \
-    opencv-python-headless==4.10.0.84 \
-    pillow==10.4.0
-
-RUN pip install --no-cache-dir \
-    onnxruntime-gpu==1.19.0 \
-    torch==2.3.1 \
-    torchvision==0.18.1
-
-RUN pip install --no-cache-dir \
-    ultralytics==8.3.203 \
-    psutil==7.0.0 \
-    loguru==0.7.3 \
-    pyyaml==6.0.2
-
-# Install remaining requirements
-RUN pip install --no-cache-dir -r requirements.txt
-
-# ====================================
-# Stage 3: Final runtime image
-# ====================================
-FROM base AS runtime
-
-# Set working directory
-WORKDIR /app
-
-# Activate py310 environment
-ENV PATH=/opt/conda/envs/py310/bin:$PATH \
-    CONDA_DEFAULT_ENV=py310
-
-# Set CUDA library paths
+# ===========================================
+# LD_LIBRARY_PATH - CUDA + cuDNN9 + TensorRT
+# ===========================================
 ENV LD_LIBRARY_PATH="\
 /usr/local/cuda/lib64:\
 /usr/local/cuda/targets/x86_64-linux/lib:\
 /usr/lib/x86_64-linux-gnu:\
-/opt/conda/envs/py310/lib:\
+/usr/lib/x86_64-linux-gnu/tensorrt:\
+/opt/conda/envs/track/lib:\
 ${LD_LIBRARY_PATH}"
 
-# Copy conda environment from dependencies stage
-COPY --from=dependencies /opt/conda /opt/conda
 
-# Copy application code
+# ===========================================
+# Stage 2 — Install dependencies
+# ===========================================
+FROM base AS dependencies
+
+WORKDIR /app
+COPY requirements-docker.txt requirements.txt
+COPY .env .env
+
+RUN pip install --upgrade pip setuptools wheel
+
+RUN pip install fastapi uvicorn[standard] python-dotenv redis aioredis loguru pyyaml
+RUN pip install numpy==1.26.4 opencv-python-headless==4.10.0.84 pillow==10.4.0
+
+# PyTorch for CUDA 12.1
+RUN pip install torch==2.3.1 torchvision==0.18.1 --index-url https://download.pytorch.org/whl/cu121
+
+# ONNX Runtime + TensorRT 10
+RUN pip install onnxruntime-gpu==1.20.0
+
+RUN pip install ultralytics==8.3.203 psutil==7.0.0
+RUN pip install -r requirements.txt
+
+
+# ===========================================
+# Stage 3 — Runtime
+# ===========================================
+FROM base AS runtime
+
+WORKDIR /app
+COPY --from=dependencies /opt/conda /opt/conda
 COPY . .
 
-# Create necessary directories
 RUN mkdir -p logs results images images_test trt_cache
-
-# Set permissions
 RUN chmod +x start_worker_optimized.py main.py
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD python -c "import redis; r=redis.Redis(host='${REDIS_HOST:-localhost}', port=${REDIS_PORT:-6379}); r.ping()" || exit 1
-
-# Expose port for API
 EXPOSE 8000
-
-# Default command - optimized worker
 CMD ["python", "start_worker_optimized.py"]
