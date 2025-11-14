@@ -50,6 +50,8 @@ RUN /opt/conda/bin/conda create -n py310 python=3.10 -y && \
 ENV PATH=/opt/conda/envs/py310/bin:$PATH \
     CONDA_DEFAULT_ENV=py310
 
+RUN echo "conda activate py310" >> ~/.bashrc
+
 # Upgrade pip in py310 environment
 RUN pip install --upgrade pip setuptools wheel
 
