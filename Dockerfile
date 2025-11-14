@@ -16,8 +16,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     curl \
-    bzip2 \
+    gnupg \
     ca-certificates \
+    bzip2 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
@@ -26,6 +27,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1-mesa-glx \
     git \
     && rm -rf /var/lib/apt/lists/*
+
+# Add NVIDIA package repos and install cuDNN 9 + TensorRT (CUDA 12 / cuDNN9)
+RUN curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/3bf863cc.pub | gpg --dearmor -o /usr/share/keyrings/nvidia-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/nvidia-archive-keyring.gpg] https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/ /" > /etc/apt/sources.list.d/cuda.list && \
+    echo "deb [signed-by=/usr/share/keyrings/nvidia-archive-keyring.gpg] https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2204/x86_64/ /" > /etc/apt/sources.list.d/nvidia-ml.list && \
+    apt-get update && apt-get install -y --no-install-recommends \
+      libcudnn9 \
+      libcudnn9-dev \
+      libnvinfer8 \
+      libnvinfer-dev \
+      libnvinfer-plugin8 || true && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Miniconda
 RUN wget --quiet https://repo.anaconda.com/archive/Anaconda3-2022.05-Linux-x86_64.sh -O ~/anaconda.sh && \
