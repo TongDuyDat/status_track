@@ -1,33 +1,44 @@
 # ===========================================
-# CUDA 12.1 + cuDNN 9 Runtime
+# Base CUDA 12.1 (no cuDNN included)
 # ===========================================
-FROM nvcr.io/nvidia/cuda:12.1.1-cudnn9-runtime-ubuntu22.04 AS base
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PATH="/opt/conda/bin:$PATH"
 
-# -------------------------------------------
+# ===========================================
 # System packages
-# -------------------------------------------
+# ===========================================
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget curl bzip2 git ca-certificates \
+    wget curl git ca-certificates \
     libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1-mesa-glx libgomp1 \
+    gnupg \
     && rm -rf /var/lib/apt/lists/*
 
+# ===========================================
+# ADD NVIDIA ML repo (cuDNN 9 + TensorRT 10)
+# ===========================================
+RUN curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/3bf863cc.pub \
+    | gpg --dearmor -o /usr/share/keyrings/nvidia-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/nvidia-archive-keyring.gpg] \
+    https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/ /" \
+    > /etc/apt/sources.list.d/cuda.list && \
+    echo "deb [signed-by=/usr/share/keyrings/nvidia-archive-keyring.gpg] \
+    https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2204/x86_64/ /" \
+    > /etc/apt/sources.list.d/nvidia-ml.list
 
 # ===========================================
-# Install TensorRT 10 (for CUDA 12 / cuDNN9)
+# Install cuDNN 9 + TensorRT 10
 # ===========================================
-RUN wget https://developer.download.nvidia.com/compute/tensorrt/10.0.1/local_repos/nv-tensorrt-local-repo-ubuntu2204-10.0.1-cuda-12.1_1.0-1_amd64.deb \
-    -O /tmp/tensorrt.deb && \
-    dpkg -i /tmp/tensorrt.deb && \
-    cp /var/nv-tensorrt-local-repo-ubuntu2204-10.0.1-cuda-12.1/nv-tensorrt-local-keys/* /usr/share/keyrings/ && \
-    apt-get update && apt-get install -y tensorrt tensorrt-dev && \
-    rm -rf /var/lib/apt/lists/* /tmp/tensorrt.deb
-
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libcudnn9 \
+    libcudnn9-dev \
+    tensorrt \
+    tensorrt-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # ===========================================
-# Install Mambaforge (no ToS, stable)
+# INSTALL MAMBAFORGE (NO TOS)
 # ===========================================
 RUN wget --quiet https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh \
     -O /tmp/mambaforge.sh && \
@@ -36,17 +47,17 @@ RUN wget --quiet https://github.com/conda-forge/miniforge/releases/latest/downlo
 SHELL ["/bin/bash", "-c"]
 
 # ===========================================
-# Create Python 3.10 Environment
+# CREATE PYTHON 3.10 ENVIRONMENT
 # ===========================================
-RUN conda create -y -n track python=3.10 && conda clean -afy
+RUN conda create -y -n track -c conda-forge python=3.10 && \
+    conda clean --all -y
 
-ENV PATH="/opt/conda/envs/track/bin:$PATH"
 ENV CONDA_PREFIX="/opt/conda/envs/track"
-ENV CONDA_DEFAULT_ENV="track"
-
+ENV PATH="$CONDA_PREFIX/bin:$PATH"
+ENV CONDA_DEFAULT_ENV=track
 
 # ===========================================
-# LD_LIBRARY_PATH - CUDA + cuDNN9 + TensorRT
+# LD_LIBRARY_PATH (cuDNN 9 + TensorRT10)
 # ===========================================
 ENV LD_LIBRARY_PATH="\
 /usr/local/cuda/lib64:\
@@ -55,6 +66,7 @@ ENV LD_LIBRARY_PATH="\
 /usr/lib/x86_64-linux-gnu/tensorrt:\
 /opt/conda/envs/track/lib:\
 ${LD_LIBRARY_PATH}"
+
 
 
 # ===========================================
