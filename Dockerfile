@@ -31,16 +31,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
     /bin/bash /tmp/miniconda.sh -b -p /opt/conda && \
     rm /tmp/miniconda.sh && \
-    /opt/conda/bin/conda clean --all -y && \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
     echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
 
-# Configure conda and create Python 3.10 environment (GỘP CHUNG ĐỂ CONFIG APPLY)
-RUN /opt/conda/bin/conda config --set channel_priority strict && \
-    /opt/conda/bin/conda config --prepend channels conda-forge && \
-    /opt/conda/bin/conda config --set always_yes yes && \
-    /opt/conda/bin/conda create -n py310 python=3.10 -y && \
-    /opt/conda/bin/conda clean --all -y && \
+# # Configure conda: XÓA default channels và CHỈ dùng conda-forge
+# RUN /opt/conda/bin/conda config --remove channels defaults && \
+#     /opt/conda/bin/conda config --add channels conda-forge && \
+#     /opt/conda/bin/conda config --set channel_priority strict && \
+#     /opt/conda/bin/conda config --set always_yes yes && \
+#     /opt/conda/bin/conda clean --all -y
+
+# Create Python 3.10 environment
+RUN /opt/conda/bin/conda create -n py310 python=3.10 -c conda-forge -y && \
+    # /opt/conda/bin/conda clean --all -y && \
     echo "conda activate py310" >> ~/.bashrc
 
 # Activate py310 environment by default
