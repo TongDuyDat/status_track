@@ -49,7 +49,8 @@ ENV PATH /opt/conda/envs/env10/bin:$PATH
 RUN /bin/bash -c "source activate env10"
 
 RUN pip install --upgrade pip setuptools wheel
-
+# Install CUDA 12.1 + cuDNN 9 ONLY in conda
+RUN /bin/bash -c "conda install -y -c nvidia cudnn=9.1.0 cuda-runtime=12.1"
 # ====================================
 # Stage 2: Dependencies installation
 # ====================================
