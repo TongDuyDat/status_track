@@ -83,6 +83,12 @@ RUN pip install --no-cache-dir \
 # Install remaining requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
+ENV LD_LIBRARY_PATH="\
+/usr/local/cuda/lib64:\
+/usr/local/cuda/targets/x86_64-linux/lib:\
+/usr/lib/x86_64-linux-gnu:\
+/opt/conda/envs/track/lib:\
+${LD_LIBRARY_PATH}"
 # ====================================
 # Stage 3: Final runtime image
 # ====================================
