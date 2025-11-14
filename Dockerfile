@@ -30,20 +30,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Miniconda
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
     /bin/bash /tmp/miniconda.sh -b -p /opt/conda && \
-    rm /tmp/miniconda.sh && \
-    /opt/conda/bin/conda clean --all --yes && \
-    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
-    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
-    echo "conda activate base" >> ~/.bashrc
+    rm /tmp/miniconda.sh
 
-# Update conda and create Python 3.10 environment
-RUN conda config --set add_anaconda_token yes && \
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
-    conda install -y python=3.10 && \
-    conda update -n base -c defaults conda && \
-    conda clean --all --yes
-
+# Fix ToS
+RUN /opt/conda/bin/conda config --set add_anaconda_token yes && \
+    /opt/conda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    /opt/conda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
+    /opt/conda/bin/conda install -y python=3.10 && \
+    /opt/conda/bin/conda update -n base -c defaults conda && \
+    /opt/conda/bin/conda clean --all --yes
 # Upgrade pip
 RUN pip install --upgrade pip setuptools wheel
 
