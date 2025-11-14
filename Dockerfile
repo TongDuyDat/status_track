@@ -39,7 +39,7 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
 # Update conda and create Python 3.10 environment
 RUN conda install -y python=3.10 && \
     conda update -n base -c defaults conda && \
-    conda clean -afy
+    /opt/conda/bin/conda clean --all --yes
 
 # Upgrade pip
 RUN pip install --upgrade pip setuptools wheel
