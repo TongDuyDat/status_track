@@ -33,7 +33,15 @@ ENV PATH /opt/conda/bin:$PATH
 
 RUN pip install --upgrade pip setuptools wheel
 # Install CUDA 12.1 + cuDNN 9 ONLY in conda
-RUN /bin/bash -c "conda install -y -c nvidia cudnn=9.1.0 cuda-runtime=12.1"
+# Install cuDNN 9 (any latest 9.x) manually into conda env
+RUN /bin/bash -c "\
+    source activate env10 && \
+    wget https://developer.download.nvidia.com/compute/cudnn/secure/9.0.0/local_installers/12.1/cudnn-linux-x86_64-9.0.0_cuda12-archive.tar.xz -O /tmp/cudnn.tar.xz && \
+    mkdir -p /tmp/cudnn_extract && \
+    tar -xvf /tmp/cudnn.tar.xz -C /tmp/cudnn_extract --strip-components=1 && \
+    cp -P /tmp/cudnn_extract/lib/libcudnn* /opt/conda/envs/env10/lib/ && \
+    cp -r /tmp/cudnn_extract/include/* /opt/conda/envs/env10/include/ && \
+    rm -rf /tmp/cudnn*"
 # ====================================
 # Stage 2: Dependencies installation
 # ====================================
