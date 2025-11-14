@@ -1,3 +1,4 @@
+Dockerfile
 # ====================================
 # Multi-stage Dockerfile for Track Status Project with Miniconda
 # ====================================
@@ -31,14 +32,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
     /bin/bash /tmp/miniconda.sh -b -p /opt/conda && \
     rm /tmp/miniconda.sh && \
-    /opt/conda/bin/conda clean -tipsy && \
+    /opt/conda/bin/conda clean --all -y && \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
     echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
     echo "conda activate py310" >> ~/.bashrc
 
 # Create Python 3.10 environment
 RUN conda create -n py310 python=3.10 -y && \
-    conda clean -afy
+    conda clean --all -y
 
 # Activate py310 environment by default
 ENV PATH=/opt/conda/envs/py310/bin:$PATH \
