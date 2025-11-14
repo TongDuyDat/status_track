@@ -1,4 +1,3 @@
-
 # ====================================
 # Multi-stage Dockerfile for Track Status Project with Miniconda
 # ====================================
@@ -34,8 +33,16 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
     rm /tmp/miniconda.sh && \
     /opt/conda/bin/conda clean --all -y && \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
-    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
-    conda create -n py310 python=3.10 -y && \
+    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
+
+# Configure conda to use conda-forge (fix ToS issue)
+RUN /opt/conda/bin/conda config --set channel_priority strict && \
+    /opt/conda/bin/conda config --prepend channels conda-forge && \
+    /opt/conda/bin/conda config --set always_yes yes
+
+# Create Python 3.10 environment
+RUN /opt/conda/bin/conda create -n py310 python=3.10 -y && \
+    /opt/conda/bin/conda clean --all -y && \
     echo "conda activate py310" >> ~/.bashrc
 
 # Activate py310 environment by default
@@ -88,14 +95,6 @@ RUN pip install --no-cache-dir \
 # Install remaining requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Set CUDA library paths
-ENV LD_LIBRARY_PATH="\
-/usr/local/cuda/lib64:\
-/usr/local/cuda/targets/x86_64-linux/lib:\
-/usr/lib/x86_64-linux-gnu:\
-/opt/conda/envs/py310/lib:\
-${LD_LIBRARY_PATH}"
-
 # ====================================
 # Stage 3: Final runtime image
 # ====================================
@@ -108,7 +107,7 @@ WORKDIR /app
 ENV PATH=/opt/conda/envs/py310/bin:$PATH \
     CONDA_DEFAULT_ENV=py310
 
-# Set CUDA library paths
+# Set CUDA library paths (CHỈ CẦN 1 LẦN Ở ĐÂY)
 ENV LD_LIBRARY_PATH="\
 /usr/local/cuda/lib64:\
 /usr/local/cuda/targets/x86_64-linux/lib:\
