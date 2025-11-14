@@ -31,17 +31,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
     /bin/bash /tmp/miniconda.sh -b -p /opt/conda && \
     rm /tmp/miniconda.sh && \
-    # /opt/conda/bin/conda clean --all --yes && \
+    /opt/conda/bin/conda clean -tipsy && \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
     echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
-    echo "conda activate base" >> ~/.bashrc
+    echo "conda activate py310" >> ~/.bashrc
 
-# Update conda and create Python 3.10 environment
-RUN conda install -y python=3.10 && \
-    # conda update -n base -c defaults conda && \
-    # /opt/conda/bin/conda clean --all --yes
+# Create Python 3.10 environment
+RUN conda create -n py310 python=3.10 -y && \
+    conda clean -afy
 
-# Upgrade pip
+# Activate py310 environment by default
+ENV PATH=/opt/conda/envs/py310/bin:$PATH \
+    CONDA_DEFAULT_ENV=py310
+
+# Upgrade pip in py310 environment
 RUN pip install --upgrade pip setuptools wheel
 
 # ====================================
@@ -51,6 +54,10 @@ FROM base AS dependencies
 
 # Set working directory
 WORKDIR /app
+
+# Ensure py310 environment is active
+ENV PATH=/opt/conda/envs/py310/bin:$PATH \
+    CONDA_DEFAULT_ENV=py310
 
 # Copy requirements file
 COPY requirements-docker.txt requirements.txt
@@ -83,12 +90,14 @@ RUN pip install --no-cache-dir \
 # Install remaining requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Set CUDA library paths
 ENV LD_LIBRARY_PATH="\
 /usr/local/cuda/lib64:\
 /usr/local/cuda/targets/x86_64-linux/lib:\
 /usr/lib/x86_64-linux-gnu:\
-/opt/conda/envs/track/lib:\
+/opt/conda/envs/py310/lib:\
 ${LD_LIBRARY_PATH}"
+
 # ====================================
 # Stage 3: Final runtime image
 # ====================================
@@ -96,6 +105,18 @@ FROM base AS runtime
 
 # Set working directory
 WORKDIR /app
+
+# Activate py310 environment
+ENV PATH=/opt/conda/envs/py310/bin:$PATH \
+    CONDA_DEFAULT_ENV=py310
+
+# Set CUDA library paths
+ENV LD_LIBRARY_PATH="\
+/usr/local/cuda/lib64:\
+/usr/local/cuda/targets/x86_64-linux/lib:\
+/usr/lib/x86_64-linux-gnu:\
+/opt/conda/envs/py310/lib:\
+${LD_LIBRARY_PATH}"
 
 # Copy conda environment from dependencies stage
 COPY --from=dependencies /opt/conda /opt/conda
