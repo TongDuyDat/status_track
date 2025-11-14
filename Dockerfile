@@ -28,31 +28,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Miniconda
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
-    /bin/bash /tmp/miniconda.sh -b -p /opt/conda && \
-    rm /tmp/miniconda.sh && \
-    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
-    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
+RUN wget --quiet https://repo.anaconda.com/archive/Anaconda3-2022.05-Linux-x86_64.sh -O ~/anaconda.sh && \
+	/bin/bash ~/anaconda.sh -b -p /opt/conda && \
+	rm ~/anaconda.sh && \
+	/opt/conda/bin/conda clean -tipsy && \
+	ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
+	echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
+	echo "conda activate base" >> ~/.bashrc && \
+	find /opt/conda/ -follow -type f -name '*.a' -delete && \
+	find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
+	/opt/conda/bin/conda clean -afy
 
-# # Configure conda: XÓA default channels và CHỈ dùng conda-forge
-# RUN /opt/conda/bin/conda config --remove channels defaults && \
-#     /opt/conda/bin/conda config --add channels conda-forge && \
-#     /opt/conda/bin/conda config --set channel_priority strict && \
-#     /opt/conda/bin/conda config --set always_yes yes && \
-#     /opt/conda/bin/conda clean --all -y
+ENV PATH /opt/conda/bin:$PATH
+COPY requirements.txt /tmp/
+RUN conda update conda -y && conda create -n env10 python=3.10 -y
 
-# Create Python 3.10 environment
-RUN /opt/conda/bin/conda create -n py310 python=3.10 -y && \
-    # /opt/conda/bin/conda clean --all -y && \
-    # echo "conda activate py310" >> ~/.bashrc
-
-# Activate py310 environment by default
-ENV PATH=/opt/conda/envs/py310/bin:$PATH \
-    CONDA_DEFAULT_ENV=py310
-
-RUN echo "conda activate py310" >> ~/.bashrc
-
+RUN echo "source activate env10" > ~/.bashrc
+ENV PATH /opt/conda/envs/env10/bin:$PATH
 # Upgrade pip in py310 environment
+RUN /bin/bash -c "source activate env10"
+
 RUN pip install --upgrade pip setuptools wheel
 
 # ====================================
@@ -62,10 +57,6 @@ FROM base AS dependencies
 
 # Set working directory
 WORKDIR /app
-
-# Ensure py310 environment is active
-ENV PATH=/opt/conda/envs/py310/bin:$PATH \
-    CONDA_DEFAULT_ENV=py310
 
 # Copy requirements file
 COPY requirements-docker.txt requirements.txt
