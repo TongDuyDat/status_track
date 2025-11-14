@@ -16,28 +16,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ===========================================
-# ADD NVIDIA ML repo (cuDNN 9 + TensorRT 10)
-# ===========================================
-RUN curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/3bf863cc.pub \
-    | gpg --dearmor -o /usr/share/keyrings/nvidia-archive-keyring.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/nvidia-archive-keyring.gpg] \
-    https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/ /" \
-    > /etc/apt/sources.list.d/cuda.list && \
-    echo "deb [signed-by=/usr/share/keyrings/nvidia-archive-keyring.gpg] \
-    https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2204/x86_64/ /" \
-    > /etc/apt/sources.list.d/nvidia-ml.list
-
-# ===========================================
-# Install cuDNN 9 + TensorRT 10
-# ===========================================
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libcudnn9 \
-    libcudnn9-dev \
-    tensorrt \
-    tensorrt-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# ===========================================
 # INSTALL MAMBAFORGE (NO TOS)
 # ===========================================
 RUN wget --quiet https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh \
