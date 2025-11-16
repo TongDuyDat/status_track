@@ -3,7 +3,7 @@
 # ====================================
 
 # Stage 1: Base image with CUDA support and Miniconda
-FROM nvidia/cuda:12.1.0-dev-runtime-ubuntu22.04 AS base
+FROM nvidia/cuda:12.1.0-devel-ubuntu22.04 AS base
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
