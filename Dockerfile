@@ -110,12 +110,13 @@ ENV PATH=/opt/conda/envs/py310/bin:$PATH \
     CONDA_DEFAULT_ENV=py310
 
 # Set CUDA library paths
-ENV LD_LIBRARY_PATH="\
-/usr/local/cuda/lib64:\
-/usr/local/cuda/targets/x86_64-linux/lib:\
-/usr/lib/x86_64-linux-gnu:\
-/opt/conda/envs/py310/lib:\
-${LD_LIBRARY_PATH}"
+# ENV LD_LIBRARY_PATH="\
+# /usr/local/cuda/lib64:\
+# /usr/local/cuda/targets/x86_64-linux/lib:\
+# /usr/lib/x86_64-linux-gnu:\
+# /opt/conda/envs/py310/lib:\
+# ${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="/opt/conda/envs/env10/lib:/usr/local/cuda/lib64:/usr/local/cuda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH}"
 
 # Copy conda environment from dependencies stage
 COPY --from=dependencies /opt/conda /opt/conda
