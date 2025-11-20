@@ -103,9 +103,10 @@ class PipelineResult:
     def __init__(self, truck: TruckResult, ocr: OCRResult):
         self.plate_number = ocr.text
         self.plate_bbox = truck.plate_bbox
-        self.truck_conf = truck.truck_conf
-        self.ocr_conf = ocr.confidence
+        self.truck_conf = float(truck.status_conf)  # ✅ Fix: Lấy từ status_conf
+        self.ocr_conf = float(ocr.confidence)
         self.truck_status = truck.status
+        self.truck_bbox = truck.status_bbox
 
     def to_dict(self):
         """Đảm bảo tất cả giá trị đều JSON serializable."""
@@ -115,22 +116,5 @@ class PipelineResult:
             "truck_conf": float(self.truck_conf),
             "ocr_conf": float(self.ocr_conf),
             "truck_status": str(self.truck_status),
-        }
-
-class PipelineResult:
-    """Gộp kết quả cuối cùng (truck + ocr)"""
-    def __init__(self, truck: TruckResult, ocr: OCRResult):
-        self.plate_number = ocr.text
-        self.plate_bbox = truck.plate_bbox
-        self.truck_conf = float(truck.status_conf)
-        self.ocr_conf = float(ocr.confidence)
-        self.truck_status = truck.status
-
-    def to_dict(self):
-        return {
-            "plate_number": self.plate_number,
-            "plate_bbox": self.plate_bbox,
-            "truck_conf": self.truck_conf,
-            "ocr_conf": self.ocr_conf,
-            "truck_status": self.truck_status,
+            "truck_bbox": self.truck_bbox if isinstance(self.truck_bbox, list) else [],
         }

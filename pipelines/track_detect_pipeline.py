@@ -12,34 +12,25 @@ def post_processing(preds):
                 {"plate": torch.empty((0, 6)), "status": torch.empty((0, 6))}
             )
             continue
-        # Tạo mask theo class ID
+        
+        # ✅ Tạo mask theo class ID (CHỈ 1 LẦN)
         plate_mask = data[:, -1] == 0
         status_mask = ~plate_mask
-
-        # mask theo class
-        plate_mask = data[:, -1] == 0
-        status_mask = ~plate_mask
-
         plate_det = data[plate_mask]
         status_det = data[status_mask]
-
-        # chọn box có confidence cao nhất trong mỗi nhóm
+        # ✅ Chọn box có confidence cao nhất
         if plate_det.numel() > 0:
-            plate_det = plate_det[torch.argmax(plate_det[:, 4])].unsqueeze(0)
+            best_idx = torch.argmax(plate_det[:, 4])
+            plate_result = plate_det[best_idx].unsqueeze(0)  # Shape: (1, 6)
         else:
-            plate_det = torch.empty((0, 6))
-
+            plate_result = torch.empty((0, 6))
         if status_det.numel() > 0:
-            status_det = status_det[torch.argmax(status_det[:, 4])].unsqueeze(0)
+            best_idx = torch.argmax(status_det[:, 4])
+            status_result = status_det[best_idx].unsqueeze(0)  # Shape: (1, 6)
         else:
-            status_det = torch.empty((0, 6))
-
-        # ✅ Kiểm tra empty trước khi index
-        plate_result = plate_det[-1] if plate_det.numel() > 0 else torch.empty(6)
-        status_result = status_det[-1] if status_det.numel() > 0 else torch.empty(6)
-
+            status_result = torch.empty((0, 6))
+        # ✅ Giữ nguyên shape (1, 6) hoặc (0, 6)
         results.append({"plate": plate_result, "status": status_result})
-
     return results
 
 
