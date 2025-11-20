@@ -9,10 +9,28 @@ from .default import postprocess
 from core.logger import logger
 
 # Sắp xếp bbox theo khoảng cách từ top-left (x_min, y_min) tới gốc (0,0)
-def sort_bboxes(bboxes: List[np.ndarray]) -> List[np.ndarray]:
-    x_min, y_min = bboxes[:, :, 0].min(axis=1), bboxes[:, :, 1].min(axis=1)
-    scores = x_min * x_min + y_min * y_min
-    return bboxes[np.argsort(scores)]
+def sort_bboxes_by_rows_tensor(bboxes: torch.Tensor, y_threshold: float = 20.0):
+    """
+    Sắp xếp bbox theo hàng (row), từ trên xuống dưới, trái sang phải.
+    """
+    # 1) Lấy góc top-left của mỗi bbox
+    x_min = bboxes[:, :, 0].min(dim=1).values  # (N,)
+    y_min = bboxes[:, :, 1].min(dim=1).values  # (N,)
+    # 2) Sort sơ bộ theo y (trên → dưới)
+    sorted_y, idx_y = torch.sort(y_min)
+    bboxes = bboxes[idx_y]
+    x_min = x_min[idx_y]
+    y_min = sorted_y
+    # 3) Gom thành các hàng (rows) dựa trên y_threshold
+    # Nếu 2 bbox liên tiếp có chênh lệch y > threshold → hàng mới
+    diff_y = torch.abs(y_min[1:] - y_min[:-1]) > y_threshold
+    row_id = torch.zeros_like(y_min, dtype=torch.long)
+    row_id[1:] = torch.cumsum(diff_y, dim=0)  # Tăng dần khi gặp hàng mới
+    # 4) Sort cuối cùng: ưu tiên row_id (hàng), sau đó x_min (trái→phải)
+    row_weight = 1e6  # Đảm bảo row_id quan trọng hơn x_min
+    scores = row_id * row_weight + x_min
+    _, final_idx = torch.sort(scores)
+    return bboxes[final_idx]
 
 def model_inference(ort_session: ort.InferenceSession, input_tensor: torch.Tensor):
     input_name = ort_session.get_inputs()[0].name
@@ -64,7 +82,7 @@ def text_detect_single(det_session: ort.InferenceSession, image, mode="xyxy"):
         bboxes_xyxy = []
         for out in outs:
             bboxes = out.get('points', [])
-            bboxes = sort_bboxes(np.array(bboxes)) if len(bboxes) > 0 else bboxes
+            bboxes = sort_bboxes_by_rows_tensor(torch.tensor(bboxes)) if len(bboxes) > 0 else bboxes
             
             if mode == "point":
                 return bboxes
