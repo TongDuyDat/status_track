@@ -88,7 +88,7 @@ def text_detect_single(det_session: ort.InferenceSession, image, mode="xyxy"):
                 return bboxes
             
             if out and len(bboxes) > 0:
-                for pts in out["points"]:
+                for pts in bboxes:
                     pts = pts.astype(np.int32).reshape(-1, 2)
                     x_min, y_min = np.clip(pts.min(axis=0), a_min=0, a_max=None)
                     x_max = min(im_vis.shape[1], pts[:, 0].max())
