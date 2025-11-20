@@ -52,9 +52,14 @@ def truck_dectect(model, images):
         status_bbox = []
 
         if plate_.numel() > 0:
-            plate_bbox, plate_conf = plate_[0:4], plate_[4]
+            # ✅ Lấy dòng đầu tiên [0] trước khi truy cập các cột
+            plate_bbox = plate_[0, 0:4].tolist()  # Lấy 4 giá trị đầu
+            plate_conf = plate_[0, 4].item()       # Lấy confidence
         if status_.numel() > 0:
-            status_bbox, status_conf, status_idx = status_[0:4], status_[4], status_[-1]
+            # ✅ Lấy dòng đầu tiên [0] trước khi truy cập các cột
+            status_bbox = status_[0, 0:4].tolist()  # Lấy 4 giá trị đầu
+            status_conf = status_[0, 4].item()       # Lấy confidence
+            status_idx = status_[0, -1].item()       # Lấy class index
 
         res = {
             "plate_bbox": plate_bbox,
