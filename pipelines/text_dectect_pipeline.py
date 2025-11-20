@@ -83,7 +83,8 @@ def text_detect_single(det_session: ort.InferenceSession, image, mode="xyxy"):
         for out in outs:
             bboxes = out.get('points', [])
             bboxes = sort_bboxes_by_rows_tensor(torch.tensor(bboxes)) if len(bboxes) > 0 else bboxes
-            
+            if isinstance(bboxes, torch.Tensor):
+                bboxes = bboxes.cpu().numpy()
             if mode == "point":
                 return bboxes
             
